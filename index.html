@@ -2,16 +2,17 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Subway Runner + Coins</title>
+    <title>3D Subway Runner</title>
     <style>
-        body { margin: 0; background: #222; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; background: #87CEEB; width: 100vw; height: 100vh; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; font-weight: bold; text-shadow: 2px 2px black; }
+        body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; background: linear-gradient(#000033, #333); }
+        #ui { position: absolute; top: 10px; left: 10px; color: gold; font-size: 22px; font-weight: bold; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
     <div id="ui">Score: 0 | Coins: 0</div>
     <canvas id="gameCanvas"></canvas>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -19,12 +20,12 @@
         canvas.height = window.innerHeight;
 
         let lane = 1; 
-        const lanes = [canvas.width/6, canvas.width/2, canvas.width - canvas.width/6];
         let score = 0;
-        let coinsCollected = 0;
-        let items = []; // Isme obstacles aur coins dono aayenge
+        let coins = 0;
+        let items = [];
+        const horizon = canvas.height * 0.4; // 3D Perspective point
 
-        // Swipe logic
+        // Swipe Controls
         let startX = 0;
         document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
         document.addEventListener('touchend', e => {
@@ -34,63 +35,68 @@
         });
 
         function spawn() {
-            let type = Math.random() > 0.3 ? 'obstacle' : 'coin';
             items.push({ 
-                x: lanes[Math.floor(Math.random()*3)], 
-                y: -50, 
-                type: type 
+                lane: Math.floor(Math.random() * 3), 
+                z: 0, // Distance from horizon
+                type: Math.random() > 0.3 ? 'box' : 'coin' 
             });
         }
-        setInterval(spawn, 800);
+        setInterval(spawn, 1000);
 
         function draw() {
-            ctx.clearRect(0,0,canvas.width, canvas.height);
-            
-            // Player
-            ctx.fillStyle = '#ff4444';
-            ctx.fillRect(lanes[lane]-25, canvas.height-100, 50, 50);
-            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw 3D Track (Road)
+            ctx.fillStyle = '#444';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.4, horizon);
+            ctx.lineTo(canvas.width * 0.6, horizon);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
+            ctx.fill();
+
+            // Draw Items (Boxes/Coins)
             items.forEach((item, i) => {
-                item.y += 7;
-                
-                if(item.type === 'obstacle') {
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(item.x - 20, item.y, 40, 40);
+                item.z += 0.02; // Speed
+                let scale = item.z; 
+                let xPos = (canvas.width / 2) + (item.lane - 1) * (canvas.width * 0.3 * scale);
+                let yPos = horizon + (canvas.height - horizon) * scale;
+                let size = 100 * scale;
+
+                if (item.type === 'box') {
+                    ctx.fillStyle = '#555'; // 3D Shadow Look
+                    ctx.fillRect(xPos - size/2, yPos - size, size, size);
+                    ctx.strokeStyle = 'white';
+                    ctx.strokeRect(xPos - size/2, yPos - size, size, size);
                 } else {
                     ctx.fillStyle = 'gold';
                     ctx.beginPath();
-                    ctx.arc(item.x, item.y + 20, 15, 0, Math.PI*2);
+                    ctx.arc(xPos, yPos - size/2, size/3, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
-                // Collision Logic
-                let pX = lanes[lane];
-                let pY = canvas.height - 100;
-
-                if (item.y > pY - 40 && item.y < pY + 50 && Math.abs(item.x - pX) < 30) {
-                    if(item.type === 'obstacle') {
-                        alert("Game Over! Coins: " + coinsCollected);
-                        location.reload();
+                // Collision
+                if (item.z > 0.85 && item.z < 0.95 && item.lane === lane) {
+                    if (item.type === 'box') {
+                        alert("Game Over!"); location.reload();
                     } else {
-                        coinsCollected++;
-                        items.splice(i, 1);
-                        updateUI();
+                        coins++; items.splice(i, 1);
                     }
                 }
-
-                if(item.y > canvas.height) { 
-                    items.splice(i, 1); 
-                    if(item.type === 'obstacle') score++; 
-                    updateUI();
-                }
+                if (item.z > 1) { items.splice(i, 1); score++; }
             });
+
+            // Player (3D Cube-ish)
+            let pSize = 80;
+            let pX = (canvas.width / 2) + (lane - 1) * (canvas.width * 0.3 * 0.9);
+            ctx.fillStyle = 'red';
+            ctx.fillRect(pX - pSize/2, canvas.height - 120, pSize, pSize);
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(pX - pSize/2, canvas.height - 120, pSize, pSize);
+
+            document.getElementById('ui').innerText = `Score: ${score} | Coins: ${coins}`;
             requestAnimationFrame(draw);
         }
-
-        function updateUI() {
-            document.getElementById('ui').innerHTML = `Score: ${score} | Coins: ${coinsCollected}`;
-        }
-
         draw();
     </script>
 </body>
