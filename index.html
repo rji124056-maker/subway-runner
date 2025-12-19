@@ -2,15 +2,15 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Subway Runner</title>
+    <title>Subway Runner + Coins</title>
     <style>
         body { margin: 0; background: #222; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; background: #87CEEB; width: 100vw; height: 100vh; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; font-weight: bold; text-shadow: 2px 2px black; }
     </style>
 </head>
 <body>
-    <div id="ui">Score: 0</div>
+    <div id="ui">Score: 0 | Coins: 0</div>
     <canvas id="gameCanvas"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -21,7 +21,8 @@
         let lane = 1; 
         const lanes = [canvas.width/6, canvas.width/2, canvas.width - canvas.width/6];
         let score = 0;
-        let obstacles = [];
+        let coinsCollected = 0;
+        let items = []; // Isme obstacles aur coins dono aayenge
 
         // Swipe logic
         let startX = 0;
@@ -33,25 +34,63 @@
         });
 
         function spawn() {
-            obstacles.push({ x: lanes[Math.floor(Math.random()*3)] - 20, y: -50 });
+            let type = Math.random() > 0.3 ? 'obstacle' : 'coin';
+            items.push({ 
+                x: lanes[Math.floor(Math.random()*3)], 
+                y: -50, 
+                type: type 
+            });
         }
-        setInterval(spawn, 1000);
+        setInterval(spawn, 800);
 
         function draw() {
             ctx.clearRect(0,0,canvas.width, canvas.height);
-            ctx.fillStyle = 'red'; // Player
+            
+            // Player
+            ctx.fillStyle = '#ff4444';
             ctx.fillRect(lanes[lane]-25, canvas.height-100, 50, 50);
             
-            ctx.fillStyle = 'black'; // Obstacles
-            obstacles.forEach((o, i) => {
-                o.y += 7;
-                ctx.fillRect(o.x, o.y, 40, 40);
-                if(o.y > canvas.height) { obstacles.splice(i, 1); score++; document.getElementById('ui').innerHTML = "Score: "+score; }
-                // Collision check
-                if(o.y > canvas.height-150 && Math.abs((lanes[lane]-20) - o.x) < 10) { location.reload(); }
+            items.forEach((item, i) => {
+                item.y += 7;
+                
+                if(item.type === 'obstacle') {
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(item.x - 20, item.y, 40, 40);
+                } else {
+                    ctx.fillStyle = 'gold';
+                    ctx.beginPath();
+                    ctx.arc(item.x, item.y + 20, 15, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Collision Logic
+                let pX = lanes[lane];
+                let pY = canvas.height - 100;
+
+                if (item.y > pY - 40 && item.y < pY + 50 && Math.abs(item.x - pX) < 30) {
+                    if(item.type === 'obstacle') {
+                        alert("Game Over! Coins: " + coinsCollected);
+                        location.reload();
+                    } else {
+                        coinsCollected++;
+                        items.splice(i, 1);
+                        updateUI();
+                    }
+                }
+
+                if(item.y > canvas.height) { 
+                    items.splice(i, 1); 
+                    if(item.type === 'obstacle') score++; 
+                    updateUI();
+                }
             });
             requestAnimationFrame(draw);
         }
+
+        function updateUI() {
+            document.getElementById('ui').innerHTML = `Score: ${score} | Coins: ${coinsCollected}`;
+        }
+
         draw();
     </script>
 </body>
