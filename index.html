@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Subway Runner</title>
+    <style>
+        body { margin: 0; background: #222; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; background: #87CEEB; width: 100vw; height: 100vh; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="ui">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let lane = 1; 
+        const lanes = [canvas.width/6, canvas.width/2, canvas.width - canvas.width/6];
+        let score = 0;
+        let obstacles = [];
+
+        // Swipe logic
+        let startX = 0;
+        document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+        document.addEventListener('touchend', e => {
+            let endX = e.changedTouches[0].clientX;
+            if (startX - endX > 50 && lane > 0) lane--;
+            else if (endX - startX > 50 && lane < 2) lane++;
+        });
+
+        function spawn() {
+            obstacles.push({ x: lanes[Math.floor(Math.random()*3)] - 20, y: -50 });
+        }
+        setInterval(spawn, 1000);
+
+        function draw() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.fillStyle = 'red'; // Player
+            ctx.fillRect(lanes[lane]-25, canvas.height-100, 50, 50);
+            
+            ctx.fillStyle = 'black'; // Obstacles
+            obstacles.forEach((o, i) => {
+                o.y += 7;
+                ctx.fillRect(o.x, o.y, 40, 40);
+                if(o.y > canvas.height) { obstacles.splice(i, 1); score++; document.getElementById('ui').innerHTML = "Score: "+score; }
+                // Collision check
+                if(o.y > canvas.height-150 && Math.abs((lanes[lane]-20) - o.x) < 10) { location.reload(); }
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
