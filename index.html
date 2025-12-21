@@ -2,99 +2,56 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Subway Runner</title>
+    <title>Mini GTA Clone</title>
     <style>
-        body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; width: 100vw; height: 100vh; background: linear-gradient(#000033, #333); }
-        #ui { position: absolute; top: 10px; left: 10px; color: gold; font-size: 22px; font-weight: bold; text-shadow: 2px 2px #000; }
+        body { margin: 0; background: #333; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; background: #555; width: 100vw; height: 100vh; }
+        #controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-around; }
+        .btn { width: 60px; height: 60px; background: rgba(255,255,255,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="ui">Score: 0 | Coins: 0</div>
-    <canvas id="gameCanvas"></canvas>
-
+    <canvas id="cityCanvas"></canvas>
+    <div id="controls">
+        <div class="btn" id="left">L</div>
+        <div class="btn" id="up">U</div>
+        <div class="btn" id="right">R</div>
+    </div>
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const canvas = document.getElementById('cityCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-        let lane = 1; 
-        let score = 0;
-        let coins = 0;
-        let items = [];
-        const horizon = canvas.height * 0.4; // 3D Perspective point
-
-        // Swipe Controls
-        let startX = 0;
-        document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
-        document.addEventListener('touchend', e => {
-            let endX = e.changedTouches[0].clientX;
-            if (startX - endX > 50 && lane > 0) lane--;
-            else if (endX - startX > 50 && lane < 2) lane++;
-        });
-
-        function spawn() {
-            items.push({ 
-                lane: Math.floor(Math.random() * 3), 
-                z: 0, // Distance from horizon
-                type: Math.random() > 0.3 ? 'box' : 'coin' 
-            });
-        }
-        setInterval(spawn, 1000);
+        let car = { x: canvas.width/2, y: canvas.height/2, angle: 0, speed: 0 };
+        
+        // Basic Controls
+        let keys = {};
+        document.getElementById('up').ontouchstart = () => { car.speed = 4; };
+        document.getElementById('up').ontouchend = () => { car.speed = 0; };
+        document.getElementById('left').ontouchstart = () => { car.angle -= 0.1; };
+        document.getElementById('right').ontouchstart = () => { car.angle += 0.1; };
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            
+            // Draw Road/Grid
+            ctx.strokeStyle = "#777";
+            for(let i=0; i<canvas.width; i+=50) { ctx.strokeRect(i, 0, 1, canvas.height); }
 
-            // Draw 3D Track (Road)
-            ctx.fillStyle = '#444';
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.4, horizon);
-            ctx.lineTo(canvas.width * 0.6, horizon);
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.lineTo(0, canvas.height);
-            ctx.fill();
+            // Move Car
+            car.x += Math.cos(car.angle) * car.speed;
+            car.y += Math.sin(car.angle) * car.speed;
 
-            // Draw Items (Boxes/Coins)
-            items.forEach((item, i) => {
-                item.z += 0.02; // Speed
-                let scale = item.z; 
-                let xPos = (canvas.width / 2) + (item.lane - 1) * (canvas.width * 0.3 * scale);
-                let yPos = horizon + (canvas.height - horizon) * scale;
-                let size = 100 * scale;
+            // Draw Car (Red Box)
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+            ctx.fillStyle = "red";
+            ctx.fillRect(-20, -10, 40, 20); // Car Body
+            ctx.fillStyle = "black";
+            ctx.fillRect(10, -12, 10, 2); // Wheels
+            ctx.restore();
 
-                if (item.type === 'box') {
-                    ctx.fillStyle = '#555'; // 3D Shadow Look
-                    ctx.fillRect(xPos - size/2, yPos - size, size, size);
-                    ctx.strokeStyle = 'white';
-                    ctx.strokeRect(xPos - size/2, yPos - size, size, size);
-                } else {
-                    ctx.fillStyle = 'gold';
-                    ctx.beginPath();
-                    ctx.arc(xPos, yPos - size/2, size/3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // Collision
-                if (item.z > 0.85 && item.z < 0.95 && item.lane === lane) {
-                    if (item.type === 'box') {
-                        alert("Game Over!"); location.reload();
-                    } else {
-                        coins++; items.splice(i, 1);
-                    }
-                }
-                if (item.z > 1) { items.splice(i, 1); score++; }
-            });
-
-            // Player (3D Cube-ish)
-            let pSize = 80;
-            let pX = (canvas.width / 2) + (lane - 1) * (canvas.width * 0.3 * 0.9);
-            ctx.fillStyle = 'red';
-            ctx.fillRect(pX - pSize/2, canvas.height - 120, pSize, pSize);
-            ctx.strokeStyle = 'black';
-            ctx.strokeRect(pX - pSize/2, canvas.height - 120, pSize, pSize);
-
-            document.getElementById('ui').innerText = `Score: ${score} | Coins: ${coins}`;
             requestAnimationFrame(draw);
         }
         draw();
