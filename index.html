@@ -2,12 +2,37 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mini GTA Clone</title>
+    <title>Mini GTA - Fixed Controls</title>
     <style>
         body { margin: 0; background: #333; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; background: #555; width: 100vw; height: 100vh; }
-        #controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-around; }
-        .btn { width: 60px; height: 60px; background: rgba(255,255,255,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        /* Ye wala part copy option ko band kar dega */
+        #controls { 
+            position: absolute; 
+            bottom: 30px; 
+            width: 100%; 
+            display: flex; 
+            justify-content: space-around;
+            user-select: none; /* Text selection band */
+            -webkit-user-select: none; /* Safari/Chrome ke liye */
+            -webkit-touch-callout: none; /* iOS long press menu band */
+        }
+        
+        .btn { 
+            width: 70px; 
+            height: 70px; 
+            background: rgba(255,255,255,0.3); 
+            border: 2px solid white;
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            color: white;
+            font-size: 20px;
+            touch-action: manipulation; /* Zoom aur selection ko rokta hai */
+        }
     </style>
 </head>
 <body>
@@ -24,32 +49,52 @@
 
         let car = { x: canvas.width/2, y: canvas.height/2, angle: 0, speed: 0 };
         
-        // Basic Controls
-        let keys = {};
-        document.getElementById('up').ontouchstart = () => { car.speed = 4; };
-        document.getElementById('up').ontouchend = () => { car.speed = 0; };
-        document.getElementById('left').ontouchstart = () => { car.angle -= 0.1; };
-        document.getElementById('right').ontouchstart = () => { car.angle += 0.1; };
+        // Touch events ko preventDefault ke sath use karenge taaki menu na khule
+        const handleTouch = (id, type) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener(type, (e) => {
+                e.preventDefault(); // Long press menu ko rokta hai
+                if (type === 'touchstart') {
+                    if (id === 'up') car.speed = 4;
+                    if (id === 'left') car.angle -= 0.2;
+                    if (id === 'right') car.angle += 0.2;
+                } else {
+                    if (id === 'up') car.speed = 0;
+                }
+            }, { passive: false });
+        };
+
+        ['up', 'left', 'right'].forEach(id => {
+            handleTouch(id, 'touchstart');
+            handleTouch(id, 'touchend');
+        });
 
         function draw() {
             ctx.clearRect(0,0, canvas.width, canvas.height);
             
-            // Draw Road/Grid
-            ctx.strokeStyle = "#777";
-            for(let i=0; i<canvas.width; i+=50) { ctx.strokeRect(i, 0, 1, canvas.height); }
+            // Background grid
+            ctx.strokeStyle = "#666";
+            for(let i=0; i<canvas.width; i+=60) { ctx.strokeRect(i, 0, 1, canvas.height); }
 
             // Move Car
             car.x += Math.cos(car.angle) * car.speed;
             car.y += Math.sin(car.angle) * car.speed;
 
-            // Draw Car (Red Box)
+            // Screen boundaries check
+            if(car.x < 0) car.x = canvas.width;
+            if(car.x > canvas.width) car.x = 0;
+            if(car.y < 0) car.y = canvas.height;
+            if(car.y > canvas.height) car.y = 0;
+
+            // Draw Car
             ctx.save();
             ctx.translate(car.x, car.y);
             ctx.rotate(car.angle);
-            ctx.fillStyle = "red";
-            ctx.fillRect(-20, -10, 40, 20); // Car Body
+            ctx.fillStyle = "#ffcc00"; // Yellow taxi style
+            ctx.fillRect(-25, -12, 50, 24);
             ctx.fillStyle = "black";
-            ctx.fillRect(10, -12, 10, 2); // Wheels
+            ctx.fillRect(10, -15, 12, 4); // Wheels
+            ctx.fillRect(10, 11, 12, 4);
             ctx.restore();
 
             requestAnimationFrame(draw);
